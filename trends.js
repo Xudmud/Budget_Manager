@@ -13,12 +13,12 @@ var SpendSchema = new Schema({
     amount: {type: Number, required: true},
     category: {type: {String, enum}},
     date: Date,
-})
+});
 
 
 var TrendSchema = new Schema({
     data: [{ type: Schema.Types.ObjectId, ref: 'Spend'}]
-})
+});
 
 var Spend = mongoose.model('Spend',SpendSchema);
 var Trend = mongoose.model('Trend',TrendSchema);
