@@ -1,25 +1,19 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var passport = require('passport');
-var authController = require('./auth');
 var authJwtController = require('./authjwt');
 var jwt = require('jsonwebtoken');
-
-const MongoClient = require('mongodb').MongoClient;
-var mongoose = require('mongoose');
-
 var User = require('./Users');
+var cors = require('cors');
 
 var app = express();
 
-let mdb;
-
 const port = process.env.PORT || 8080;
-
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(passport.initialize());
+app.use(cors());
 
 var router = express.Router();
 
@@ -137,29 +131,27 @@ router.route('/users')
         const token = usertoken.split(' ');
         const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
 
-        User.findOneAndUpdate({userid: decoded},
-            {
-                title: req.body.title,
-                year: req.body.year,
-                genre: req.body.genre,
-                actors: req.body.actors
+        let params = {
+            username: req.body.username,
+            first: req.body.first,
+            last: req.body.last,
+            password: req.body.password,
+            age: req.body.age,
+            email: req.body.email,
+            phone: req.body.phone,
+            budget: req.body.budget
+        };
 
-            }, function (err, found) {
-                if (found) {
-                    res.json({message: "Entry Updated"});
+        for(let prop in params) if(!params[prop]) delete params[prop];
+
+        User.findOneAndUpdate({username: decoded}, params, function (err, newDoc) {
+                if (err) {
+                    res.json({err: err});
                 } else {
-                    res.json({message: "Entry not found"});
+                    res.json({message: "Profile updated", updatedProfile: newDoc});
                 }
-
             });
     }
-else{
-    res.json({message: "Please check that your fields are not null, and that you have at least 3 actors"});
-}
-
-
-    })
-
     /*
     ROUTE: /users.get
     Just return the users profile information in full. Not sure if we should have a separate database to store their
@@ -172,7 +164,7 @@ else{
         const token = usertoken.split(' ');
         const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
 
-        User.findById(decoded, function (err,user) {
+        User.find({username: decoded}, function (err,user) {
             if(err)
             {
                 res.json({message: "Invalid query"});
@@ -181,9 +173,7 @@ else{
             {
                 res.json({message: "User Info:", user:user});
             }
-
         })
-
     })
 
     /*
@@ -193,12 +183,16 @@ else{
         - DELETE THE PROFILE. This should take like ten seconds to write...
     */
     .delete(authJwtController.isAuthenticated, function (req, res) {
-        User.findOneAndDelete({user: req.body.username}, function(err, found)
+        const usertoken = req.headers.authorization;
+        const token = usertoken.split(' ');
+        const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
+
+        User.findOneAndDelete({username: decoded}, function(err, found)
         {
             if(err){
                 res.json({message: "Invalid query"});
             }
-            if(found){
+            if(found != null){
                 res.json({message: "Your account has been deleted"});
             }
             else{
@@ -236,7 +230,7 @@ Reject all other requests that aren't listed above.
  */
  /* Response code of 405 is used for method not allowed */
 router.all('*', function(req, res) {
-    res.status(405).send({success: false, error: 'Method nor allowed.'});
+    res.status(405).send({success: false, error: 'Request not allowed.'});
 });
 
 app.use('/', router);

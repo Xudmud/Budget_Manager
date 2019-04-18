@@ -4,7 +4,7 @@ var bcrypt = require('bcrypt-nodejs');
 
 mongoose.Promise = global.Promise;
 
-mongoose.connect(process.env.MONGODB_USER_URL, { useNewUrlParser: true } );
+mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true } );
 mongoose.set('useCreateIndex', true);
 
 // user schema
@@ -12,6 +12,7 @@ var UserSchema = new Schema({
     username: { type: String, required: true, index: { unique: true }},
     first: { type: String, required: true},
     last: { type: String, required: true},
+    password: { type: String, required: true, select: false },
     age: { type: Number, required: true},
     email: { type: String, required: false,},
     phone: { type: String, required: false,},
