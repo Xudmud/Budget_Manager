@@ -9,23 +9,15 @@ mongoose.Promise = global.Promise;
 mongoose.connect(process.env.MONGODB_URL, {useNewUrlParser:true} );
 mongoose.set('useCreateIndex', true);
 
-var SpendSchema = new Schema({
-    amount: {type: Number, required: true},
-    category: {type: {String, enum}},
-    date: Date,
-});
-
-
 var TrendSchema = new Schema({
-    data: [{ type: Schema.Types.ObjectId, ref: 'Spend'}]
+    userID: {type: mongoose.Types.ObjectId, required: true},
+    data: [{
+        amount: {type: Number, required: true},
+        category: {type: String, enum:["Recreation", "Nutrition", "Gift"]},
+        date: {type: Date, required: true},
+    }]
 });
 
-var Spend = mongoose.model('Spend',SpendSchema);
 var Trend = mongoose.model('Trend',TrendSchema);
 
-/* Measurement of financial information. */
-/*
-    amount: string,enum
-    category: (choose from list)
-    Date: Date
-*/
+module.exports = mongoose.model('Trend', TrendSchema);

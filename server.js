@@ -3,8 +3,11 @@ var bodyParser = require('body-parser');
 var passport = require('passport');
 var authJwtController = require('./authjwt');
 var jwt = require('jsonwebtoken');
-var User = require('./Users');
 var cors = require('cors');
+
+var User = require('./Users');
+var Trend = require('./trends');
+
 
 var app = express();
 
@@ -62,6 +65,17 @@ router.post('/signup', function(req, res) {
                     return res.send(err);
             }
 
+            let t = new Trend({
+                userID: user._id
+            });
+
+            t.save(function (err) {
+                if (err) {
+                    res.json({message: err});
+                } else {
+                }
+            });
+
             res.json({ success: true, message: 'User created!' });
         });
     }
@@ -82,17 +96,21 @@ router.post('/signin', function(req, res) {
 
     User.findOne({ username: userNew.username }).select('username password').exec(function(err, user) {
         if (err) res.send(err);
+        if (user == null){
+            res.send("No user");
+        }else{
+            user.comparePassword(userNew.password, function(isMatch){
+                if (isMatch) {
+                    var userToken = {id: user._id, username: user.username};
+                    var token = jwt.sign(userToken, process.env.SECRET_KEY);
+                    res.json({success: true, token: 'JWT ' + token});
+                }
+                else {
+                    res.status(401).send({success: false, message: 'Authentication failed.'});
+                }
+            });
+        }
 
-        user.comparePassword(userNew.password, function(isMatch){
-            if (isMatch) {
-                var userToken = {id: user._id, username: user.username};
-                var token = jwt.sign(userToken, process.env.SECRET_KEY);
-                res.json({success: true, token: 'JWT ' + token});
-            }
-            else {
-                res.status(401).send({success: false, message: 'Authentication failed.'});
-            }
-        });
 
 
     });
@@ -131,8 +149,6 @@ router.route('/users')
         const token = usertoken.split(' ');
         const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
 
-        console.log("Reached first");
-
         let params = {
             username: req.body.username,
             first: req.body.first,
@@ -148,10 +164,8 @@ router.route('/users')
 
         console.log("Reached second");
 
-        User.findOneAndUpdate({username: decoded}, params, function (err, newDoc) {
+        User.findOneAndUpdate({username: decoded.username}, params, {new: true}, function (err, newDoc) {
                 if (err) {
-                    console.log("Reached third");
-                    console.log(newDoc);
                     res.json({err: err});
                 } else {
                     res.json({message: "Profile updated", updatedProfile: newDoc});
@@ -170,10 +184,10 @@ router.route('/users')
         const token = usertoken.split(' ');
         const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
 
-        User.find({username: decoded}, function (err,user) {
+        User.find({username: decoded.username}, function (err,user) {
             if(err)
             {
-                res.json({message: "Invalid query"});
+                res.json({message: "Invalid query", error: err});
             }
             if(user)
             {
@@ -193,7 +207,7 @@ router.route('/users')
         const token = usertoken.split(' ');
         const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
 
-        User.findOneAndDelete({username: decoded}, function(err, found)
+        User.findOneAndDelete({username: decoded.username}, function(err, found)
         {
             if(err){
                 res.json({message: "Invalid query"});
@@ -228,7 +242,39 @@ router.route('/trends')
         - Going to have to discuss this in full later. But the basic functionality isn't hard.
     */
     .get(authJwtController.isAuthenticated, function(req, res){
+        const usertoken = req.headers.authorization;
+        const token = usertoken.split(' ');
+        const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
 
+        Trend.find({userID: decoded.id}, function(err, doc){
+           if(err) {
+               res.json({error: err});
+           }else if(doc != null){
+                res.json({trend: doc});
+           }
+        });
+    })
+    
+    .post(authJwtController.isAuthenticated, function (req, res) {
+        const usertoken = req.headers.authorization;
+        const token = usertoken.split(' ');
+        const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
+
+        var item = {
+            amount: req.body.amount,
+            category: req.body.category,
+            date: req.body.date
+        };
+
+        Trend.update(
+            { userID: decoded.id},
+            { $push: { data: item} }, function (err, doc){
+              if (err){
+                  res.json({error: err});
+              }else if(doc != null){
+                  res.json({trend: doc});
+              }
+            });
     });
 
 /*
