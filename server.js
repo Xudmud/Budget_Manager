@@ -47,8 +47,8 @@ router.post('/signup', function(req, res) {
         var user = new User();
         user.username = req.body.username;
         user.password = req.body.password;
-        user.first = req.body.name;
-        user.last = req.body.name;
+        user.first = req.body.first;
+        user.last = req.body.last;
         user.age = req.body.age;
         user.budget = req.body.budget;
 
@@ -131,6 +131,8 @@ router.route('/users')
         const token = usertoken.split(' ');
         const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
 
+        console.log("Reached first");
+
         let params = {
             username: req.body.username,
             first: req.body.first,
@@ -144,14 +146,18 @@ router.route('/users')
 
         for(let prop in params) if(!params[prop]) delete params[prop];
 
+        console.log("Reached second");
+
         User.findOneAndUpdate({username: decoded}, params, function (err, newDoc) {
                 if (err) {
+                    console.log("Reached third");
+                    console.log(newDoc);
                     res.json({err: err});
                 } else {
                     res.json({message: "Profile updated", updatedProfile: newDoc});
                 }
             });
-    }
+    })
     /*
     ROUTE: /users.get
     Just return the users profile information in full. Not sure if we should have a separate database to store their
