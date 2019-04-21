@@ -53,8 +53,8 @@ router.post('/signup', function(req, res) {
         user.first = req.body.first;
         user.last = req.body.last;
         user.age = req.body.age;
-        user.budget = req.body.budget;
-
+        user.monthlyIncome = req.body.monthlyIncome;
+        user.recurringMonthly = req.body.recurringMonthly;
         // save the user
         user.save(function(err) {
             if (err) {
@@ -157,8 +157,10 @@ router.route('/users')
             age: req.body.age,
             email: req.body.email,
             phone: req.body.phone,
-            budget: req.body.budget
-        };
+            monthlyIncome: req.body.monthlyIncome,
+            recurringMonthly: req.body.recurringMonthly
+
+    };
 
         for(let prop in params) if(!params[prop]) delete params[prop];
 
@@ -223,6 +225,27 @@ router.route('/users')
     }
 )
 
+router.route('/bills')
+    .post(authJwtController.isAuthenticated, function (req, res) {
+        const usertoken = req.headers.authorization;
+        const token = usertoken.split(' ');
+        const decoded = jwt.verify(token[1], process.env.SECRET_KEY);
+
+        var item = {
+            title: req.body.title,
+            amount: req.body.amount
+        };
+
+        User.update(
+            { _id: decoded.id},
+            { $push: { recurringMonthly: item} }, function (err, doc){
+                if (err){
+                    res.json({error: err});
+                }else if(doc != null){
+                    res.json({bill: doc});
+                }
+            });
+    });
 
 
 /*

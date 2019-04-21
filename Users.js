@@ -16,7 +16,11 @@ var UserSchema = new Schema({
     age: { type: Number, required: true},
     email: { type: String, required: false,},
     phone: { type: String, required: false,},
-    budget: { type: Number, required: true,}
+    monthlyIncome: { type: Number, required: true,},
+    recurringMonthly: [{
+        title: {type: String, required: true},
+        amount: {type: Number, required: true},
+    }]
 });
 
 // hash the password before the user is saved
